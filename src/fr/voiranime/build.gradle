@@ -3,7 +3,7 @@ apply plugin: 'kotlin-android'
 
 ext {
     extName = ''
-    pkgNameSuffix = 'en.voiranime'
+    pkgNameSuffix = 'fr.voiranime'
     extClass = '.Voiranime'
     extVersionCode = 1
     libVersion = '12'
