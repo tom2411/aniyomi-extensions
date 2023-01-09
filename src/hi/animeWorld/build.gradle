@@ -1,0 +1,17 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+ext {
+    extName = 'AnimeWorld (experimental)'
+    pkgNameSuffix = 'hi.animeWorld'
+    extClass = '.AnimeWorld'
+    extVersionCode = 12
+    libVersion = '13'
+}
+
+dependencies {
+    implementation(project(':lib-streamsb-extractor'))
+}
+
+
+apply from: "$rootDir/common.gradle"

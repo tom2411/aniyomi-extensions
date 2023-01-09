@@ -1,0 +1,18 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+ext {
+    extName = 'Jkanime'
+    pkgNameSuffix = 'es.jkanime'
+    extClass = '.Jkanime'
+    extVersionCode = 12
+    libVersion = '13'
+}
+
+dependencies {
+    implementation(project(':lib-fembed-extractor'))
+    implementation(project(':lib-okru-extractor'))
+}
+
+
+apply from: "$rootDir/common.gradle"

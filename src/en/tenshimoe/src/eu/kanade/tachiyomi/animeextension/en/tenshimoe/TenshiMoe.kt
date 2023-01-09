@@ -1,7 +1,11 @@
 package eu.kanade.tachiyomi.animeextension.en.tenshimoe
 
 import android.annotation.SuppressLint
-import android.util.Log
+import android.app.Application
+import android.content.SharedPreferences
+import androidx.preference.ListPreference
+import androidx.preference.PreferenceScreen
+import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
@@ -9,19 +13,22 @@ import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.util.asJsoup
-import okhttp3.Headers.Companion.toHeaders
+import okhttp3.Headers
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import java.lang.Exception
 import java.lang.Float.parseFloat
 import java.text.SimpleDateFormat
 import java.util.Date
 import kotlin.collections.ArrayList
 
-class TenshiMoe : ParsedAnimeHttpSource() {
+class TenshiMoe : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
 
     override val name = "tenshi.moe"
 
@@ -31,7 +38,16 @@ class TenshiMoe : ParsedAnimeHttpSource() {
 
     override val supportsLatest = true
 
-    override val client: OkHttpClient = network.cloudflareClient
+    private val ddgInterceptor = DdosGuardInterceptor(network.client)
+
+    override val client: OkHttpClient = network.client
+        .newBuilder()
+        .addInterceptor(ddgInterceptor)
+        .build()
+
+    private val preferences: SharedPreferences by lazy {
+        Injekt.get<Application>().getSharedPreferences("source_$id", 0x0000)
+    }
 
     override fun popularAnimeSelector(): String = "ul.anime-loop.loop li a"
 
@@ -102,20 +118,53 @@ class TenshiMoe : ParsedAnimeHttpSource() {
     override fun videoListParse(response: Response): List<Video> {
         val document = response.asJsoup()
         val iframe = document.selectFirst("iframe").attr("src")
-        val referer = response.request.url.encodedPath
-        val newHeaderList = mutableMapOf(Pair("referer", baseUrl + referer))
-        headers.forEach { newHeaderList[it.first] = it.second }
-        val iframeResponse = client.newCall(GET(iframe, newHeaderList.toHeaders()))
+        val referer = response.request.url.toString()
+        val refererHeaders = Headers.headersOf("referer", referer)
+        val iframeResponse = client.newCall(GET(iframe, refererHeaders))
             .execute().asJsoup()
-        return iframeResponse.select(videoListSelector()).map { videoFromElement(it) }
+        return videosFromElement(iframeResponse.selectFirst(videoListSelector()))
     }
 
-    override fun videoListSelector() = "source"
+    override fun videoListSelector() = "script:containsData(source)"
 
-    override fun videoFromElement(element: Element): Video {
-        Log.i("lol", element.attr("src"))
-        return Video(element.attr("src"), element.attr("title"), element.attr("src"), null)
+    private fun videosFromElement(element: Element): List<Video> {
+        val data = element.data().substringAfter("sources: [").substringBefore("],")
+        val sources = data.split("src: '").drop(1)
+        val videoList = mutableListOf<Video>()
+        for (source in sources) {
+            val src = source.substringBefore("'")
+            val size = source.substringAfter("size: ").substringBefore(",")
+            val cookie = ddgInterceptor.getNewCookie(src.toHttpUrl())?.value ?: ""
+            val video = Video(
+                src,
+                size + "p",
+                src,
+                headers = Headers.headersOf("cookie", "__ddg2_=$cookie"),
+            )
+            videoList.add(video)
+        }
+        return videoList
     }
+
+    override fun List<Video>.sort(): List<Video> {
+        val quality = preferences.getString("preferred_quality", null)
+        if (quality != null) {
+            val newList = mutableListOf<Video>()
+            var preferred = 0
+            for (video in this) {
+                if (video.quality.contains(quality)) {
+                    newList.add(preferred, video)
+                    preferred++
+                } else {
+                    newList.add(video)
+                }
+            }
+            return newList
+        }
+        return this
+    }
+
+    override fun videoFromElement(element: Element) = throw Exception("not used")
 
     override fun videoUrlParse(document: Document) = throw Exception("not used")
 
@@ -163,4 +212,23 @@ class TenshiMoe : ParsedAnimeHttpSource() {
     override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/anime?s=rel-d&page=$page")
 
     override fun latestUpdatesSelector(): String = "ul.anime-loop.loop li a"
+
+    override fun setupPreferenceScreen(screen: PreferenceScreen) {
+        val videoQualityPref = ListPreference(screen.context).apply {
+            key = "preferred_quality"
+            title = "Preferred quality"
+            entries = arrayOf("1080p", "720p", "480p", "360p")
+            entryValues = arrayOf("1080", "720", "480", "360")
+            setDefaultValue("1080")
+            summary = "%s"
+
+            setOnPreferenceChangeListener { _, newValue ->
+                val selected = newValue as String
+                val index = findIndexOfValue(selected)
+                val entry = entryValues[index] as String
+                preferences.edit().putString(key, entry).commit()
+            }
+        }
+        screen.addPreference(videoQualityPref)
+    }
 }

@@ -1,0 +1,18 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+ext {
+    extName = 'Animension'
+    pkgNameSuffix = 'en.animension'
+    extClass = '.Animension'
+    extVersionCode = 8
+    libVersion = '13'
+}
+
+dependencies {
+    implementation(project(':lib-fembed-extractor'))
+    implementation(project(':lib-streamsb-extractor'))
+    implementation(project(':lib-dood-extractor'))
+}
+
+apply from: "$rootDir/common.gradle"

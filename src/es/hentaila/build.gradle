@@ -1,0 +1,18 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+ext {
+    extName = 'Hentaila'
+    pkgNameSuffix = 'es.hentaila'
+    extClass = '.Hentaila'
+    extVersionCode = 11
+    libVersion = '13'
+    containsNsfw = true
+}
+
+dependencies {
+    implementation(project(':lib-fembed-extractor'))
+}
+
+
+apply from: "$rootDir/common.gradle"

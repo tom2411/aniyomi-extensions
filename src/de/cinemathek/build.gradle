@@ -1,0 +1,16 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+ext {
+    extName = 'Cinemathek'
+    pkgNameSuffix = 'de.cinemathek'
+    extClass = '.Cinemathek'
+    extVersionCode = 3
+    libVersion = '13'
+}
+
+dependencies {
+    implementation(project(':lib-streamsb-extractor'))
+}
+
+apply from: "$rootDir/common.gradle"

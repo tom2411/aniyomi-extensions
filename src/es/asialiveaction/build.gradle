@@ -1,0 +1,19 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+ext {
+    extName = 'AsiaLiveAction'
+    pkgNameSuffix = 'es.asialiveaction'
+    extClass = '.AsiaLiveAction'
+    extVersionCode = 9
+    libVersion = '13'
+}
+
+dependencies {
+    implementation(project(':lib-fembed-extractor'))
+    implementation(project(':lib-okru-extractor'))
+    implementation(project(':lib-streamsb-extractor'))
+}
+
+
+apply from: "$rootDir/common.gradle"

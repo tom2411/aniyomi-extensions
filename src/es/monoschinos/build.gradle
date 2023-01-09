@@ -1,0 +1,18 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+ext {
+    extName = 'MonosChinos'
+    pkgNameSuffix = 'es.monoschinos'
+    extClass = '.MonosChinos'
+    extVersionCode = 18
+    libVersion = '13'
+}
+
+dependencies {
+    implementation(project(':lib-fembed-extractor'))
+    implementation(project(':lib-okru-extractor'))
+}
+
+
+apply from: "$rootDir/common.gradle"
